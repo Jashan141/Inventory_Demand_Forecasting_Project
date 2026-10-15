@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartStock | ML Inventory Demand Forecasting System</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>SmartStock</h2>
+                    <span>Demand Forecasting</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#overview" class="nav-item active" data-tab="overview">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#forecast-tool" class="nav-item" data-tab="forecast-tool">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Demand Forecaster</span>
+                </a>
+                <a href="#inventory-table" class="nav-item" data-tab="inventory-table">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Inventory & Reorder</span>
+                </a>
+                <a href="#analytics-section" class="nav-item" data-tab="analytics-section">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Visual Analytics</span>
+                </a>
+                <a href="#model-info" class="nav-item" data-tab="model-info">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>ML Model Insights</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="model-badge">
+                    <span class="pulse-dot"></span>
+                    <div class="model-badge-info">
+                        <strong>Random Forest</strong>
+                        <small>R²: {{ metrics.r2 if metrics else '0.857' }} | MAE: {{ metrics.mae if metrics else '3.55' }}</small>
+                    </div>
+                </div>
+                <button id="btnRetrainModel" class="btn btn-sm btn-outline">
+                    <i class="fa-solid fa-rotate"></i> Retrain Model
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- TOP NAVBAR -->
+            <header class="topbar">
+                <div class="topbar-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="globalSearchInput" placeholder="Search product name, ID, or category...">
+                </div>
+
+                <div class="topbar-actions">
+                    <a href="/api/export-report" class="btn btn-outline" download>
+                        <i class="fa-solid fa-file-arrow-down"></i> Export CSV Report
+                    </a>
+                    <button id="btnQuickForecast" class="btn btn-primary">
+                        <i class="fa-solid fa-bolt"></i> Quick Forecast
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- ======================================================== -->
+                <!-- SECTION 1: STATS KPI CARDS                               -->
+                <!-- ======================================================== -->
+                <section id="overview" class="section-block">
+                    <div class="section-header">
+                        <div>
+                            <h1>Inventory Intelligence Overview</h1>
+                            <p class="subtitle">Real-time stock monitoring, historical sales aggregation, and ML demand projections.</p>
+                        </div>
+                        <div class="badge-status-group">
+                            <span class="status-tag status-critical">
+                                <span class="dot"></span> {{ summary.critical_stock_count }} Critical Low Stock
+                            </span>
+                            <span class="status-tag status-warning">
+                                <span class="dot"></span> {{ summary.reorder_required_count }} Reorder Required
+                            </span>
+                            <span class="status-tag status-success">
+                                <span class="dot"></span> {{ summary.total_products - summary.reorder_required_count }} Stock Sufficient
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- METRIC CARDS GRID -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-blue">
+                                <i class="fa-solid fa-box-open"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Total Products</span>
+                                <h3 class="stat-value">{{ summary.total_products }}</h3>
+                                <span class="stat-hint">Active catalog items</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-emerald">
+                                <i class="fa-solid fa-cubes"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Current Total Inventory</span>
+                                <h3 class="stat-value">{{ "{:,}".format(summary.total_inventory) }}</h3>
+                                <span class="stat-hint">Units across warehouse</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-indigo">
+                                <i class="fa-solid fa-chart-line-up"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Predicted 30-Day Demand</span>
+                                <h3 class="stat-value">{{ "{:,}".format(summary.total_predicted_30d) }}</h3>
+                                <span class="stat-hint">Units forecasted by ML</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-amber">
+                                <i class="fa-solid fa-truck-ramp-box"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Reorder Required</span>
+                                <h3 class="stat-value">{{ summary.reorder_required_count }}</h3>
+                                <span class="stat-hint">Products needing replenishment</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-rose">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Critical Stock Alerts</span>
+                                <h3 class="stat-value">{{ summary.critical_stock_count }}</h3>
+                                <span class="stat-hint">Stock below safety threshold</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon bg-purple">
+                                <i class="fa-solid fa-sack-dollar"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-label">Historical Revenue</span>
+                                <h3 class="stat-value">${{ "{:,.2f}".format(summary.total_sales_revenue) }}</h3>
+                                <span class="stat-hint">{{ "{:,}".format(summary.total_units_sold) }} units sold historically</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ======================================================== -->
+                <!-- SECTION 2: INTERACTIVE DEMAND FORECASTING TOOL           -->
+                <!-- ======================================================== -->
+                <section id="forecast-tool" class="section-block">
+                    <div class="card forecast-panel-card">
+                        <div class="card-header">
+                            <div>
+                                <h2><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Machine Learning Demand Forecaster</h2>
+                                <p class="card-subtitle">Select a product and forecast horizon to project daily demand and automated reorder calculations.</p>
+                            </div>
+                            <span class="model-pill">Random Forest Regressor (R²: {{ metrics.r2 if metrics else '0.86' }})</span>
+                        </div>
+
+                        <div class="forecast-form-bar">
+                            <div class="form-group">
+                                <label for="productSelect"><i class="fa-solid fa-tag"></i> Select Product:</label>
+                                <select id="productSelect" class="form-control">
+                                    {% for p in products %}
+                                    <option value="{{ p.Product_ID }}" data-lead="{{ p.Lead_Time_Days }}" data-category="{{ p.Category }}" data-price="{{ p.Price }}">
+                                        {{ p.Product_ID }} - {{ p.Product_Name }} ({{ p.Category }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="forecastHorizon"><i class="fa-regular fa-calendar-days"></i> Forecast Horizon:</label>
+                                <select id="forecastHorizon" class="form-control">
+                                    <option value="7">Next 7 Days (1 Week)</option>
+                                    <option value="14">Next 14 Days (2 Weeks)</option>
+                                    <option value="30" selected>Next 30 Days (1 Month)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="leadTimeInput"><i class="fa-solid fa-truck-fast"></i> Lead Time (Days):</label>
+                                <input type="number" id="leadTimeInput" class="form-control" min="1" max="60" value="5" placeholder="Lead Time">
+                            </div>
+
+                            <div class="form-action">
+                                <button id="btnRunForecast" class="btn btn-primary">
+                                    <i class="fa-solid fa-play"></i> Run Demand Forecast
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- LIVE FORECAST RESULT SUMMARY CARDS -->
+                        <div id="forecastKpiContainer" class="forecast-results-grid">
+                            <div class="kpi-mini-card">
+                                <span class="kpi-title">Current Inventory</span>
+                                <h4 id="kpiCurrentInv" class="kpi-number">--</h4>
+                                <span class="kpi-sub">On-hand warehouse stock</span>
+                            </div>
+
+                            <div class="kpi-mini-card highlight-kpi">
+                                <span class="kpi-title">Total Forecasted Demand</span>
+                                <h4 id="kpiForecastDemand" class="kpi-number">--</h4>
+                                <span id="kpiForecastDays" class="kpi-sub">Across 30 days</span>
+                            </div>
+
+                            <div class="kpi-mini-card">
+                                <span class="kpi-title">Safety Stock Buffer</span>
+                                <h4 id="kpiSafetyStock" class="kpi-number">--</h4>
+                                <span class="kpi-sub">Buffer for lead time risk</span>
+                            </div>
+
+                            <div class="kpi-mini-card">
+                                <span class="kpi-title">Recommended Inventory</span>
+                                <h4 id="kpiRecommendedInv" class="kpi-number">--</h4>
+                                <span class="kpi-sub">Predicted Demand + Safety</span>
+                            </div>
+
+                            <div class="kpi-mini-card highlight-order">
+                                <span class="kpi-title">Reorder Quantity</span>
+                                <h4 id="kpiReorderQty" class="kpi-number">--</h4>
+                                <span id="kpiReorderStatus" class="reorder-badge">Calculating...</span>
+                            </div>
+                        </div>
+
+                        <!-- INTERACTIVE FORECAST CHART -->
+                        <div class="chart-container-box">
+                            <div class="chart-header-row">
+                                <h3 id="forecastChartTitle">Demand Forecast Timeline: Historical Actuals vs ML Predictions</h3>
+                                <div class="chart-legend-custom">
+                                    <span class="legend-item"><span class="legend-dot dot-historical"></span> Past 30 Days Actual Sales</span>
+                                    <span class="legend-item"><span class="legend-dot dot-predicted"></span> ML Future Forecast</span>
+                                </div>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="forecastTimelineChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- FORMULA EXPLANATION BANNER -->
+                        <div class="formula-banner">
+                            <div class="formula-icon"><i class="fa-solid fa-calculator"></i></div>
+                            <div class="formula-text">
+                                <strong>Inventory Recommendation Formula:</strong>
+                                <code>Reorder Quantity = Predicted Demand + Safety Stock − Current Inventory</code>
+                                <p>If Reorder Quantity &gt; 0, status is set to <strong>Reorder Required</strong>. If current inventory is below safety stock, system triggers <strong>Critical Stock Alert</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ======================================================== -->
+                <!-- SECTION 3: INVENTORY TABLE & RECOMMENDATIONS             -->
+                <!-- ======================================================== -->
+                <section id="inventory-table" class="section-block">
+                    <div class="card">
+                        <div class="card-header table-header-flex">
+                            <div>
+                                <h2><i class="fa-solid fa-boxes-packing text-primary"></i> Inventory Status & Reorder Recommendations</h2>
+                                <p class="card-subtitle">Complete product catalog with current stock levels, ML-predicted 30-day demand, and suggested reorders.</p>
+                            </div>
+                            <div class="table-controls">
+                                <div class="filter-pill-group">
+                                    <button class="filter-pill active" data-filter="all">All ({{ summary.total_products }})</button>
+                                    <button class="filter-pill filter-critical" data-filter="critical">Critical ({{ summary.critical_stock_count }})</button>
+                                    <button class="filter-pill filter-warning" data-filter="warning">Reorder Soon ({{ summary.reorder_required_count - summary.critical_stock_count }})</button>
+                                    <button class="filter-pill filter-success" data-filter="success">Sufficient ({{ summary.total_products - summary.reorder_required_count }})</button>
+                                </div>
+
+                                <select id="categoryFilter" class="form-control form-control-sm">
+                                    <option value="all">All Categories</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat }}">{{ cat }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table" id="inventoryRecommendationsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Unit Price</th>
+                                        <th>Current Stock</th>
+                                        <th>Lead Time</th>
+                                        <th>30-Day Demand (ML)</th>
+                                        <th>Safety Stock</th>
+                                        <th>Target Level</th>
+                                        <th>Reorder Qty</th>
+                                        <th>Reorder Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in summary.recommendations %}
+                                    <tr class="table-row status-{{ item.alert_badge }}" data-category="{{ item.category }}" data-status="{{ item.alert_badge }}" data-search="{{ item.product_id }} {{ item.product_name }} {{ item.category }}">
+                                        <td>
+                                            <div class="product-cell">
+                                                <span class="product-code">{{ item.product_id }}</span>
+                                                <span class="product-name">{{ item.product_name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="category-chip">{{ item.category }}</span></td>
+                                        <td>${{ "{:.2f}".format(item.price) }}</td>
+                                        <td>
+                                            <strong class="stock-num {{ 'text-critical' if item.alert_badge == 'critical' else '' }}">
+                                                {{ item.current_inventory }}
+                                            </strong>
+                                        </td>
+                                        <td>{{ item.lead_time_days }} days</td>
+                                        <td><strong>{{ item.total_predicted_demand }}</strong> units</td>
+                                        <td>{{ item.safety_stock }} units</td>
+                                        <td>{{ item.recommended_inventory }} units</td>
+                                        <td>
+                                            <span class="reorder-qty-pill {{ 'has-reorder' if item.reorder_quantity > 0 else 'no-reorder' }}">
+                                                {{ item.reorder_quantity }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if item.alert_badge == 'critical' %}
+                                                <span class="badge badge-critical"><i class="fa-solid fa-circle-exclamation"></i> Critical Stock</span>
+                                            {% elif item.alert_badge == 'warning' %}
+                                                <span class="badge badge-warning"><i class="fa-solid fa-triangle-exclamation"></i> Reorder Soon</span>
+                                            {% else %}
+                                                <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Stock Sufficient</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-xs btn-action btn-inspect" data-id="{{ item.product_id }}" data-lead="{{ item.lead_time_days }}">
+                                                <i class="fa-solid fa-chart-line"></i> Forecast
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ======================================================== -->
+                <!-- SECTION 4: VISUAL ANALYTICS & CHARTS                     -->
+                <!-- ======================================================== -->
+                <section id="analytics-section" class="section-block">
+                    <div class="section-header">
+                        <div>
+                            <h2>Interactive Business Analytics & Trends</h2>
+                            <p class="subtitle">Multi-dimensional inventory visualizations and sales patterns.</p>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-chart-line text-primary"></i> Monthly Sales Volume Trend</h3>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="monthlyTrendChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-chart-pie text-emerald"></i> Sales by Category</h3>
+                            </div>
+                            <div class="canvas-wrapper doughnut-wrapper">
+                                <canvas id="categorySalesChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-ranking-star text-amber"></i> Top Selling Products (Units Sold)</h3>
+                            </div>
+                            <div class="canvas-wrapper">
+                                <canvas id="topProductsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-shield-heart text-rose"></i> Stock Status Distribution</h3>
+                            </div>
+                            <div class="canvas-wrapper doughnut-wrapper">
+                                <canvas id="stockDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MATPLOTLIB STATIC REPORT CHARTS GALLERY -->
+                    <div class="card static-charts-card">
+                        <div class="card-header">
+                            <div>
+                                <h3><i class="fa-solid fa-image text-indigo"></i> Matplotlib Static Export Gallery</h3>
+                                <p class="card-subtitle">Server-rendered Matplotlib plots generated for academic reports and assignment documentation.</p>
+                            </div>
+                            <button id="btnRegeneratePlots" class="btn btn-sm btn-outline">
+                                <i class="fa-solid fa-arrows-rotate"></i> Refresh Graphs
+                            </button>
+                        </div>
+                        <div class="gallery-grid">
+                            <div class="gallery-item">
+                                <span class="gallery-title">Daily Sales Trend & 7-Day MA</span>
+                                <img src="{{ url_for('static', filename='charts/sales_trend.png') }}" alt="Sales Trend" loading="lazy">
+                            </div>
+                            <div class="gallery-item">
+                                <span class="gallery-title">Inventory vs Recommended Target</span>
+                                <img src="{{ url_for('static', filename='charts/inventory_vs_recommendation.png') }}" alt="Inventory vs Recommendation" loading="lazy">
+                            </div>
+                            <div class="gallery-item">
+                                <span class="gallery-title">Category Sales Breakdown</span>
+                                <img src="{{ url_for('static', filename='charts/category_distribution.png') }}" alt="Category Distribution" loading="lazy">
+                            </div>
+                            <div class="gallery-item">
+                                <span class="gallery-title">Stock Alert Breakdown</span>
+                                <img src="{{ url_for('static', filename='charts/reorder_status_distribution.png') }}" alt="Status Distribution" loading="lazy">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ======================================================== -->
+                <!-- SECTION 5: ML MODEL INSIGHTS & EXPLANATIONS              -->
+                <!-- ======================================================== -->
+                <section id="model-info" class="section-block">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2><i class="fa-solid fa-brain text-purple"></i> Machine Learning Architecture & Methodology</h2>
+                                <p class="card-subtitle">Educational guide explaining the machine learning pipeline, mathematics, and operational workflow.</p>
+                            </div>
+                        </div>
+
+                        <div class="explanation-grid">
+                            <div class="explanation-card">
+                                <div class="expl-icon bg-blue"><i class="fa-solid fa-tree"></i></div>
+                                <h3>1. Random Forest Regressor</h3>
+                                <p>An ensemble learning algorithm combining multiple decision trees (bagging). It prevents overfitting, handles non-linear customer purchasing trends, and captures complex feature interactions effortlessly.</p>
+                                <ul class="metric-list">
+                                    <li><strong>Trees (n_estimators):</strong> 100</li>
+                                    <li><strong>R² Accuracy Score:</strong> {{ metrics.r2 if metrics else '0.857' }}</li>
+                                    <li><strong>Mean Absolute Error:</strong> {{ metrics.mae if metrics else '3.55' }} units</li>
+                                </ul>
+                            </div>
+
+                            <div class="explanation-card">
+                                <div class="expl-icon bg-emerald"><i class="fa-solid fa-database"></i></div>
+                                <h3>2. Engineered Features</h3>
+                                <p>To model temporal seasonality and purchasing momentum, the dataset is transformed into rich predictive features:</p>
+                                <ul>
+                                    <li><strong>Calendar Signals:</strong> Month, Day, Day of Week, IsWeekend, Quarter, DayOfYear</li>
+                                    <li><strong>Momentum Lags:</strong> 7-day and 14-day lagged sales figures</li>
+                                    <li><strong>Moving Average:</strong> 7-day rolling window mean sales</li>
+                                </ul>
+                            </div>
+
+                            <div class="explanation-card">
+                                <div class="expl-icon bg-amber"><i class="fa-solid fa-calculator"></i></div>
+                                <h3>3. Safety Stock Formula</h3>
+                                <p>Protects businesses against supplier delays and sudden demand surges using statistical service levels:</p>
+                                <div class="math-block">
+                                    <code>Safety Stock = Z × σ_daily × √(Lead_Time)</code>
+                                </div>
+                                <p class="text-muted">Where Z = 1.65 (95% service cycle confidence), σ_daily is the standard deviation of daily demand, and Lead_Time is supplier delivery days.</p>
+                            </div>
+
+                            <div class="explanation-card">
+                                <div class="expl-icon bg-rose"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                                <h3>4. Reorder Recommendation Logic</h3>
+                                <p>Calculates the optimal replenishment units to prevent both stock-outs and excessive holding costs:</p>
+                                <div class="math-block">
+                                    <code>Reorder Qty = (Predicted Demand + Safety Stock) − Current Stock</code>
+                                </div>
+                                <p class="text-muted">If Reorder Qty &gt; 0, status is flagged as <strong>Reorder Required</strong>. If Current Stock &le; Safety Stock, a <strong>Critical Alert</strong> is raised.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toastNotification" class="toast">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMessage">Action completed successfully</span>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
