@@ -1,10 +1,10 @@
-# 📦 SmartStock: Inventory Demand Forecasting System
+# SmartStock: Inventory Demand Forecasting System
 
 An end-to-end, beginner-friendly yet production-quality **Inventory Demand Forecasting and Stock Replenishment Recommendation System** built with **Python, Machine Learning (Scikit-Learn Random Forest), Pandas, NumPy, Matplotlib, Flask, HTML5, CSS3, and JavaScript (Chart.js)**.
 
 ---
 
-## 🎯 1. Project Overview & Business Problem
+## 1. Project Overview & Business Problem
 
 ### The Problem
 Retailers and warehouse operators face a chronic dilemma:
@@ -13,13 +13,13 @@ Retailers and warehouse operators face a chronic dilemma:
 
 ### The Solution
 **SmartStock** bridges historical point-of-sale patterns with Machine Learning regression to accurately predict future product demand across 7, 14, or 30 days. It couples this demand forecast with supplier lead times and statistical safety stock buffers to recommend the optimal **Reorder Quantity** and classify items into clear operational priorities:
-- 🔴 **Critical Stock**: Inventory is dangerously below safety stock.
-- 🟠 **Reorder Soon**: Inventory will not cover the forecasted period plus safety buffer.
-- 🟢 **Stock Sufficient**: Ample inventory on hand.
+- **Critical Stock**: Inventory is dangerously below safety stock.
+- **Reorder Soon**: Inventory will not cover the forecasted period plus safety buffer.
+- **Stock Sufficient**: Ample inventory on hand.
 
 ---
 
-## 🔄 2. Complete Workflow Diagram
+## 2. Complete Workflow Diagram
 
 ```
 [ Historical Sales Data CSV ]
@@ -55,7 +55,7 @@ Retailers and warehouse operators face a chronic dilemma:
 
 ---
 
-## 📊 3. Dataset Columns Explained
+## 3. Dataset Columns Explained
 
 The dataset is located at `data/sales_data.csv` and contains daily historical transaction records:
 
@@ -72,7 +72,7 @@ The dataset is located at `data/sales_data.csv` and contains daily historical tr
 
 ---
 
-## 🧠 4. How the Machine Learning Model Works
+## 4. How the Machine Learning Model Works
 
 ### Algorithm: Random Forest Regressor
 Instead of relying on a single linear line (which fails to capture complex weekend spikes and monthly holiday waves), we use **Random Forest Regression** (`sklearn.ensemble.RandomForestRegressor`):
@@ -95,7 +95,7 @@ Before training, raw timestamps are converted into predictive machine learning f
 
 ---
 
-## 📐 5. Inventory Recommendation & Reorder Formulas
+## 5. Inventory Recommendation & Reorder Formulas
 
 ### 1. Safety Stock Formula
 Safety stock acts as a protective cushion against unforeseen supplier delivery delays and sudden sales spikes:
@@ -120,7 +120,7 @@ $$\text{Reorder Quantity} = \text{Predicted Demand} + \text{Safety Stock} - \tex
 
 ---
 
-## 📁 6. Project Structure
+## 6. Project Structure
 
 ```
 Inventory demand forcasting/
@@ -155,7 +155,7 @@ Inventory demand forcasting/
 
 ---
 
-## 🚀 7. Step-by-Step Installation & Running Guide
+## 7. Step-by-Step Installation & Running Guide
 
 ### Prerequisites
 - Python 3.9, 3.10, 3.11, 3.12, 3.13, or 3.14 installed on your system.
@@ -241,7 +241,7 @@ You will now see the live interactive dashboard!
 
 ---
 
-## 🖥️ 8. Key Dashboard Features & Usage
+## 8. Key Dashboard Features & Usage
 
 1. **Top KPI Cards**: Displays real-time counts for Total Products, Total Inventory, 30-Day Predicted Demand, Reorder Needed, Critical Alerts, and Historical Revenue.
 2. **Interactive Demand Forecaster**:
@@ -262,12 +262,3 @@ You will now see the live interactive dashboard!
    - Matplotlib export gallery.
 5. **CSV Export**: Click **Export CSV Report** on the top navigation bar to download a spreadsheet report for supply chain operations.
 6. **One-Click Retrain**: Click the **Retrain Model** button in the sidebar anytime to re-evaluate the model on updated data.
-
----
-
-## 👨‍💻 Technologies Used
-- **Backend**: Python 3, Flask
-- **Data Science & ML**: Scikit-Learn, Pandas, NumPy, Joblib
-- **Data Visualization**: Matplotlib (static exports), Chart.js 4 (interactive web canvas)
-- **Frontend**: HTML5, Modern CSS3 (Grid & Flexbox), Vanilla JavaScript (ES6+)
-- **Design System**: Plus Jakarta Sans, Font Awesome 6 Icons
