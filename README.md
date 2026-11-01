@@ -53,7 +53,7 @@ Retailers and warehouse operators face a chronic dilemma:
   • Matplotlib Report Gallery & CSV Export
 ## Complete Workflow Diagram
 
-![SmartStock Workflow Diagram](workflow-diagram.png)
+![SmartStock Workflow Diagram](SmartStock%20Forecasting%20Workflow%20Diagram.png)
 ```
 
 ---
