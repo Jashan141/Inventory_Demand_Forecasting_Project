@@ -51,6 +51,9 @@ Retailers and warehouse operators face a chronic dilemma:
   • Chart.js Interactive Timeline Visualizations
   • Catalog Search & Category Filters
   • Matplotlib Report Gallery & CSV Export
+## Complete Workflow Diagram
+
+![SmartStock Workflow Diagram](workflow-diagram.png)
 ```
 
 ---
